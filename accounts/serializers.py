@@ -4,7 +4,6 @@ from stack_app.models import Question
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # questions = serializers.PrimaryKeyRelatedField(many=True, queryset=Question.objects.all())
     confirmPassword = serializers.CharField(write_only=True, required=True)
     
     class Meta:

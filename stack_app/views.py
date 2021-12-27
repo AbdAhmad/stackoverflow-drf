@@ -9,10 +9,12 @@ from rest_framework import permissions
 from stack_app.permissions import IsOwnerOrReadOnly
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.contrib.auth.models import User
+
 
 
 class QuestionList(generics.ListCreateAPIView):
-    queryset = Question.objects.all()
+    questions = Question.objects.all()
     serializer_class = QuestionSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
@@ -32,39 +34,30 @@ class QuestionList(generics.ListCreateAPIView):
             else:
                 questions = Question.objects.all().order_by('-views')
                 marked = 'mostviewed'
-        # questions_dict = {}
-        # for question in questions:
-        #     ans_n_votes = []
-        #     ans_count = Answer.objects.filter(question_to_ans=question).count()
-        #     all_votes = Questionvote.objects.filter(question=question)
-        #     upvotes = all_votes.filter(upvote=True).count()
-        #     downvotes = all_votes.filter(downvote=True).count()
-        #     votes_count = upvotes - downvotes
-        #     ans_n_votes.append(ans_count)
-        #     ans_n_votes.append(votes_count)
-        #     questions_dict[str(question)] = ans_n_votes
 
-        questions_list = []
         for question in questions:
-            ques_ans_votes_views_tags = []
-            ques_ans_votes_views_tags.append(str(question))
+
             ans_count = Answer.objects.filter(question_to_ans=question).count()
+
             all_votes = Questionvote.objects.filter(question=question)
             upvotes = all_votes.filter(upvote=True).count()
             downvotes = all_votes.filter(downvote=True).count()
             votes_count = upvotes - downvotes
-            ques_ans_votes_views_tags.append(ans_count)
-            ques_ans_votes_views_tags.append(votes_count)
-            ques_ans_votes_views_tags.append(question.views)
-            ques_ans_votes_views_tags.append(question.tags)
-            questions_list.append(ques_ans_votes_views_tags)
 
-        context = {
-            'questions_list': questions_list,
-            'marked': marked
-        }
+            question.ans_count = ans_count
 
-        return Response(context)
+            question.votes = votes_count
+
+            question.save()
+
+        serializer = QuestionSerializer(questions, many=True)
+
+        return Response(serializer.data)
+
+        # context = {
+        #     'questions_dict': questions_dict,
+        #     'marked': marked
+        # }
 
 
 class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -75,34 +68,67 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         question = Question.objects.get(slug=kwargs['slug'])
-        user = request.user
-        author = question.user
-        authenticated = False
-        if str(user) == str(author):
-            authenticated = True
-        all_ques_votes = Questionvote.objects.filter(question=question)
-        upvotes = all_ques_votes.filter(upvote=True).count()
-        downvotes = all_ques_votes.filter(downvote=True).count()
-        ques_votes = upvotes - downvotes
+
+        ques_serializer = QuestionSerializer(question, many=False)
+
+        answers = Answer.objects.filter(question_to_ans=question)
+
+        for answer in answers:
+
+            all_votes = Answervote.objects.filter(answer=answer)
+            upvotes = all_votes.filter(upvote=True).count()
+            downvotes = all_votes.filter(downvote=True).count()
+            votes_count = upvotes - downvotes
+
+            answer.votes = votes_count
+            answer.save()
+
+        ans_serializer = AnswerSerializer(answers, many=True)
+
         question.views = question.views + 1 
         question.save()
  
-        context = {
-            'question': str(question),
-            'ques_votes': ques_votes,
-            'authenticated': authenticated 
-            }
-        return Response(context)
+        return Response({'question': ques_serializer.data, 'answers': ans_serializer.data})
 
 
-class AnswerList(generics.ListCreateAPIView):
-    queryset = Answer.objects.all()
-    serializer_class = AnswerSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+# class AnswerList(generics.ListCreateAPIView):
+#     queryset = Answer.objects.all()
+#     serializer_class = AnswerSerializer
+#     authentication_classes = [JWTAuthentication]
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+#     def create(self, request, *args, **kwargs):
+#         question = Question.objects.get(id=kwargs['pk'])
+
+#         answer = Answer.objects.create(question_to_answer=question)
+
+#         answer.save()
+
+#         serializer = AnswerSerializer(data=answer)
+
+#         return Response(serializer.data)
+
+#     def perform_create(self, serializer):
+#         serializer.save(user=self.request.user)
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def answer_create(request, pk):
+        data = request.data
+
+        question = Question.objects.get(id=pk)
+        
+        answer = Answer.objects.create(answer=data['answer'], question_to_ans=question, user=request.user)
+        print('answer after create', answer)
+
+        answer.save()
+
+        serializer = AnswerSerializer(answer, many=False)
+
+        # serializer.save(user=request.user)
+
+        return Response(serializer.data)
 
 
 class AnswerDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -110,6 +136,16 @@ class AnswerDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AnswerSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrReadOnly]
+
+    def retrieve(self, request, *args, **kwargs):
+
+        question = Question.objects.get(pk=kwargs['pk'])
+
+        answers = Answer.objects.filter(question_to_ans=question)
+
+        serializer = AnswerSerializer(answers, many=True)
+ 
+        return Response(serializer.data)
 
 
 @api_view(['POST'])
@@ -246,9 +282,21 @@ class ProfileList(generics.ListCreateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrReadOnly]
+
+    def retrieve(self, request, *args, **kwargs):
+        user = User.objects.get(username=kwargs['username'])
+        try:
+            profile = Profile.objects.get(user=user)
+        except Profile.DoesNotExist:
+            profile = None
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)

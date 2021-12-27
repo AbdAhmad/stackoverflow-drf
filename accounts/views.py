@@ -12,9 +12,6 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 
-def user(request):
-    print(request.user)
-
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -45,11 +42,9 @@ def register(request):
         return Response({'password': 'Password is too short'})
 
     if password.isdigit():
-        print('inside second if')
         return Response({'password': 'Password cannot be entirely numeric'})
 
     if password != confirmPassword:
-        print('inside third if')
         return Response({'password': 'Two passwords do not match'})
 
 

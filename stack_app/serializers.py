@@ -8,7 +8,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['id', 'title', 'body', 'tags', 'user']
+        fields = ['id', 'title', 'body', 'tags', 'user', 'views', 'votes', 'ans_count', 'created_at', 'slug']
 
 
 
@@ -17,7 +17,7 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        fields = ['id', 'answer', 'user', 'question_to_ans']
+        fields = ['id', 'answer', 'user', 'question_to_ans', 'votes', 'created_at']
 
 
 class QuestionvoteSerializer(serializers.ModelSerializer):
@@ -37,10 +37,11 @@ class AnswervoteSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.username')    
 
     class Meta:
         model = Profile
-        fields = ['id', 'name', 'email', 'location', 'about_me']
+        fields = ['id', 'user', 'full_name', 'email', 'location', 'bio']
 
 
 

@@ -17,16 +17,19 @@ class Question(models.Model):
     body = models.TextField()
     user = models.ForeignKey(User, related_name='questions', on_delete=models.CASCADE)
     slug = models.SlugField(max_length=250, null=True, blank=True)
+    answers = models.ManyToManyField('stack_app.Answer', blank=True)
     # tags = models.ManyToManyField(Tag, blank=True)
     tags = models.CharField(max_length=200)
     views = models.IntegerField(default=0)
+    votes = models.IntegerField(default=0)
+    ans_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title[:50]
 
-def pre_save_receiver(sender, instance, *args, **kwargs):
+def pre_save_receiver(instance, **kwargs):
    if not instance.slug:
        instance.slug = unique_slug_generator(instance)
 
@@ -37,6 +40,7 @@ class Answer(models.Model):
     answer = models.TextField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     question_to_ans = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
+    votes = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,14 +69,14 @@ class Answervote(models.Model):
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    full_Name = models.CharField(max_length=100, default='NA')
-    email = models.EmailField(max_length=254, default='NA')
-    location = models.CharField(max_length=100, default='NA')
-    bio = models.TextField(default='NA')
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(max_length=254, blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
     ques_asked = models.ManyToManyField('stack_app.Question', blank = True)
     ans_given = models.ManyToManyField('stack_app.Answer', blank = True)
     date_joined = models.DateTimeField(default = timezone.now)
 
     def __str__(self):
-        return self.name
+        return self.user.username
