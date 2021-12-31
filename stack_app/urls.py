@@ -13,4 +13,5 @@ urlpatterns = [
     path('downvote_ans/<int:pk>/', views.downvote_ans),
     path('profile/', views.ProfileList.as_view()),
     path('profile/<str:username>/', views.ProfileDetail.as_view()),
+    path('searched_ques/<str:searched_ques>', views.searched_ques)
 ]

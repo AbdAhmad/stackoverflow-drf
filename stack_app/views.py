@@ -1,3 +1,4 @@
+from django.views.generic.base import View
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from stack_app.serializers import QuestionSerializer, AnswerSerializer, QuestionvoteSerializer, ProfileSerializer, AnswervoteSerializer
 from .models import Question, Answer, Questionvote, Answervote, Profile
@@ -10,7 +11,7 @@ from stack_app.permissions import IsOwnerOrReadOnly
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.models import User
-
+from rest_framework import status
 
 
 class QuestionList(generics.ListCreateAPIView):
@@ -23,17 +24,14 @@ class QuestionList(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
     def list(self, request):
-        if request.method == 'POST':
-                searched_ques = request.POST['search']
-                questions = Question.objects.filter(title__icontains=searched_ques)
-                marked = ''
+
+        if 'q' in request.GET and request.GET['q'] == 'latest':
+            questions = Question.objects.all().order_by('-created_at')
+            question_order = 'latest'
+
         else:
-            if request.GET and ('q' in request.GET) and request.GET['q'] == 'latest':
-                questions = Question.objects.all().order_by('-created_at')
-                marked = 'latest'
-            else:
-                questions = Question.objects.all().order_by('-views')
-                marked = 'mostviewed'
+            questions = Question.objects.all().order_by('-views')
+            question_order = 'mostviewed'
 
         for question in questions:
 
@@ -50,14 +48,10 @@ class QuestionList(generics.ListCreateAPIView):
 
             question.save()
 
-        serializer = QuestionSerializer(questions, many=True)
+        questions_serializer = QuestionSerializer(questions, many=True)
 
-        return Response(serializer.data)
+        return Response({'questions': questions_serializer.data, 'question_order': question_order})
 
-        # context = {
-        #     'questions_dict': questions_dict,
-        #     'marked': marked
-        # }
 
 
 class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -65,6 +59,8 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = QuestionSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrReadOnly]
+
+    lookup_field = "slug"
 
     def retrieve(self, request, *args, **kwargs):
         question = Question.objects.get(slug=kwargs['slug'])
@@ -91,25 +87,22 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response({'question': ques_serializer.data, 'answers': ans_serializer.data})
 
 
-# class AnswerList(generics.ListCreateAPIView):
-#     queryset = Answer.objects.all()
-#     serializer_class = AnswerSerializer
-#     authentication_classes = [JWTAuthentication]
-#     permission_classes = [permissions.IsAuthenticated]
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def searched_ques(request, searched_ques):
+    
+    questions = Question.objects.filter(title__icontains=searched_ques).order_by('-views')
+   
+    if(len(questions) > 0):
+        print('inside if')
+        serializer = QuestionSerializer(questions, many=True)
+        question_order = 'mostviewed'
+        return Response({'questions': serializer.data, 'question_order': question_order})
+    else:
+        print('inside else')
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-#     def create(self, request, *args, **kwargs):
-#         question = Question.objects.get(id=kwargs['pk'])
-
-#         answer = Answer.objects.create(question_to_answer=question)
-
-#         answer.save()
-
-#         serializer = AnswerSerializer(data=answer)
-
-#         return Response(serializer.data)
-
-#     def perform_create(self, serializer):
-#         serializer.save(user=self.request.user)
 
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -118,15 +111,11 @@ def answer_create(request, pk):
         data = request.data
 
         question = Question.objects.get(id=pk)
+
+        serializer = AnswerSerializer(data=data)
         
-        answer = Answer.objects.create(answer=data['answer'], question_to_ans=question, user=request.user)
-        print('answer after create', answer)
-
-        answer.save()
-
-        serializer = AnswerSerializer(answer, many=False)
-
-        # serializer.save(user=request.user)
+        if serializer.is_valid():
+            serializer.save(question_to_ans=question, user=request.user)
 
         return Response(serializer.data)
 
@@ -292,11 +281,41 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrReadOnly]
 
+
     def retrieve(self, request, *args, **kwargs):
         user = User.objects.get(username=kwargs['username'])
+
         try:
             profile = Profile.objects.get(user=user)
         except Profile.DoesNotExist:
             profile = None
-        serializer = ProfileSerializer(profile)
+
+        questions = Question.objects.filter(user=user)
+        questions_serializer = QuestionSerializer(questions, many=True)
+
+        answers = Answer.objects.filter(user=user)
+        answers_serializer = AnswerSerializer(answers, many=True)
+
+        profile_serializer = ProfileSerializer(profile)
+
+        return Response({
+            'profile': profile_serializer.data,
+            'questions': questions_serializer.data,
+            'answers': answers_serializer.data
+            })
+
+
+    def update(self, request, *args, **kwargs):
+        data = request.data
+        print(data)
+
+        user = User.objects.get(username=kwargs['username'])
+
+        profile = Profile.objects.get(user=user)
+
+        serializer = ProfileSerializer(instance=profile, data=data)
+
+        if serializer.is_valid():
+            serializer.save()
+
         return Response(serializer.data)

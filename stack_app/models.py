@@ -16,7 +16,7 @@ class Question(models.Model):
     title = models.CharField(max_length=200, unique=True)
     body = models.TextField()
     user = models.ForeignKey(User, related_name='questions', on_delete=models.CASCADE)
-    slug = models.SlugField(max_length=250, null=True, blank=True)
+    slug = models.SlugField(max_length=250, null=True, blank=True, unique=True)
     answers = models.ManyToManyField('stack_app.Answer', blank=True)
     # tags = models.ManyToManyField(Tag, blank=True)
     tags = models.CharField(max_length=200)
