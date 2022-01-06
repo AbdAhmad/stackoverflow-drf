@@ -12,6 +12,9 @@ from stack_app.permissions import IsOwnerOrReadOnly
 from stack_app.serializers import QuestionSerializer, AnswerSerializer, QuestionvoteSerializer, ProfileSerializer, AnswervoteSerializer
 
 
+################################################################################################################
+########################################## Question Views ######################################################
+################################################################################################################
 
 
 class QuestionList(generics.ListCreateAPIView):
@@ -81,60 +84,6 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response({'question': ques_serializer.data, 'answers': ans_serializer.data})
 
 
-class SearchedQues(APIView):
-
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-
-        try:
-            questions = Question.objects.filter(title__icontains=kwargs['searched_ques']).order_by('-views')
-        except Question.DoesNotExist:
-            questions = None
-
-
-        if questions:
-            serializer = QuestionSerializer(questions, many=True)
-            return Response(serializer.data)
-        else:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-class AnswerCreate(APIView):
-
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        data = request.data
-        question = Question.objects.get(id=kwargs['pk'])
-
-        serializer = AnswerSerializer(data=data)
-        
-        if serializer.is_valid():
-            serializer.save(question_to_ans=question, user=request.user)
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class AnswerDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Answer.objects.all()
-    serializer_class = AnswerSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrReadOnly]
-
-    def retrieve(self, request, *args, **kwargs):
-
-        answer = Answer.objects.get(pk=kwargs['pk'])
-        question = answer.question_to_ans
-
-        ans__serializer = AnswerSerializer(answer, many=False)
-        ques_serializer = QuestionSerializer(question, many=False)
- 
-        return Response({'answer': ans__serializer.data, 'question': ques_serializer.data})
-
-
 class UpvoteQues(APIView):
 
     authentication_classes = [JWTAuthentication]
@@ -198,6 +147,65 @@ class DownvoteQues(APIView):
             return Response(status=status.HTTP_201_CREATED)
 
 
+class SearchedQues(APIView):
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+
+        try:
+            questions = Question.objects.filter(title__icontains=kwargs['searched_ques']).order_by('-views')
+        except Question.DoesNotExist:
+            questions = None
+
+
+        if questions:
+            serializer = QuestionSerializer(questions, many=True)
+            return Response(serializer.data)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+######################################################################################################################
+############################################# Answer Views ###########################################################
+######################################################################################################################
+
+
+class AnswerCreate(APIView):
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        data = request.data
+        question = Question.objects.get(id=kwargs['pk'])
+
+        serializer = AnswerSerializer(data=data)
+        
+        if serializer.is_valid():
+            serializer.save(question_to_ans=question, user=request.user)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AnswerDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Answer.objects.all()
+    serializer_class = AnswerSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def retrieve(self, request, *args, **kwargs):
+
+        answer = Answer.objects.get(pk=kwargs['pk'])
+        question = answer.question_to_ans
+
+        ans__serializer = AnswerSerializer(answer, many=False)
+        ques_serializer = QuestionSerializer(question, many=False)
+ 
+        return Response({'answer': ans__serializer.data, 'question': ques_serializer.data})
+
+
 class UpvoteAns(APIView):
 
     authentication_classes = [JWTAuthentication]
@@ -259,6 +267,11 @@ class DownvoteAns(APIView):
         if serializer.is_valid():
             serializer.save(user=user, downvote=True, answer=answer)
             return Response(status=status.HTTP_201_CREATED)
+
+
+################################################################################################################
+########################################### Profile Views ######################################################
+################################################################################################################
 
 
 class ProfileList(generics.ListCreateAPIView):
