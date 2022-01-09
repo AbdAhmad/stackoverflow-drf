@@ -3,7 +3,6 @@ from . import views
 
 
 urlpatterns = [
-    path('api-auth/', include('rest_framework.urls')),
     path('question/', views.QuestionList.as_view()),
     path('question/<str:slug>/', views.QuestionDetail.as_view()),
     path('answer_create/<int:pk>/', views.AnswerCreate.as_view()),

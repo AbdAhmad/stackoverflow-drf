@@ -64,20 +64,30 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "slug"
 
     def retrieve(self, request, *args, **kwargs):
-        question = Question.objects.get(slug=kwargs['slug'])
+        try:
+            question = Question.objects.get(slug=kwargs['slug'])
+        except Question.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        all_ques_vote = Questionvote.objects.filter(question=question)
+        ques_upvotes = all_ques_vote.filter(upvote=True).count()
+        ques_downvotes = all_ques_vote.filter(downvote=True).count()
+        ques_votes_count = ques_upvotes - ques_downvotes
+        question.votes = ques_votes_count
+        question.views = question.views + 1 
+        question.save()
+
         ques_serializer = QuestionSerializer(question, many=False)
+
         answers = Answer.objects.filter(question_to_ans=question)
 
         for answer in answers:
-            all_votes = Answervote.objects.filter(answer=answer)
-            upvotes = all_votes.filter(upvote=True).count()
-            downvotes = all_votes.filter(downvote=True).count()
-            votes_count = upvotes - downvotes
-            answer.votes = votes_count
+            all_ans_votes = Answervote.objects.filter(answer=answer)
+            ans_upvotes = all_ans_votes.filter(upvote=True).count()
+            ans_downvotes = all_ans_votes.filter(downvote=True).count()
+            ans_votes_count = ans_upvotes - ans_downvotes
+            answer.votes = ans_votes_count
             answer.save()
-
-        question.views = question.views + 1 
-        question.save()
 
         ans_serializer = AnswerSerializer(answers, many=True)
  
@@ -222,19 +232,21 @@ class UpvoteAns(APIView):
             ans_vote = None
 
         if ans_vote is not None:
-            if ans_vote.user == user:
-                if ans_vote.upvote != True: 
-                    ans_vote.upvote = True
-                    ans_vote.downvote = False
-                    ans_vote.save()
+            if ans_vote.upvote != True: 
+                ans_vote.upvote = True
+                ans_vote.downvote = False
+                ans_vote.save()
+                print('in if')
                 return Response(status=status.HTTP_201_CREATED)
             else:
+                print('in else')
                 return Response(status=status.HTTP_208_ALREADY_REPORTED)
             
         serializer = AnswervoteSerializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save(user=user, upvote=True, answer=answer)
+            print('in first if')
             return Response(status=status.HTTP_201_CREATED)
 
 
@@ -292,25 +304,26 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
     def retrieve(self, request, *args, **kwargs):
-        user = User.objects.get(username=kwargs['username'])
-
         try:
+            user = User.objects.get(username=kwargs['username'])
+        except User.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)           
+
+        else:
             profile = Profile.objects.get(user=user)
-        except Profile.DoesNotExist:
-            profile = None
+            
+            questions = Question.objects.filter(user=user)
+            answers = Answer.objects.filter(user=user)
+        
+            profile_serializer = ProfileSerializer(profile)
+            questions_serializer = QuestionSerializer(questions, many=True)
+            answers_serializer = AnswerSerializer(answers, many=True)
 
-        questions = Question.objects.filter(user=user)
-        answers = Answer.objects.filter(user=user)
-       
-        profile_serializer = ProfileSerializer(profile)
-        questions_serializer = QuestionSerializer(questions, many=True)
-        answers_serializer = AnswerSerializer(answers, many=True)
-
-        return Response({
-            'profile': profile_serializer.data,
-            'questions': questions_serializer.data,
-            'answers': answers_serializer.data
-            })
+            return Response({
+                'profile': profile_serializer.data,
+                'questions': questions_serializer.data,
+                'answers': answers_serializer.data
+                })
 
 
     def update(self, request, *args, **kwargs):
