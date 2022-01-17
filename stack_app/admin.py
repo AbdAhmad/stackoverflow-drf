@@ -6,4 +6,3 @@ admin.site.register(Answer)
 admin.site.register(Questionvote)
 admin.site.register(Answervote)
 admin.site.register(Profile)
-

@@ -55,7 +55,6 @@ class QuestionList(generics.ListCreateAPIView):
         return Response({'questions': questions_serializer.data, 'question_order': question_order})
 
 
-
 class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
@@ -103,7 +102,7 @@ class UpvoteQues(APIView):
         
         question = Question.objects.get(id=kwargs['pk'])
         user = request.user
-        # slug = question.slug
+        
         try:
             ques_vote_by_user = Questionvote.objects.filter(user=user)
             ques_vote = ques_vote_by_user.get(question=question)
@@ -134,7 +133,7 @@ class DownvoteQues(APIView):
     def post(self, request, *args, **kwargs):
         question = Question.objects.get(id=kwargs['pk'])
         user = request.user
-        # slug = question.slug
+        
         try:
             ques_vote_by_user = Questionvote.objects.filter(user=user)
             ques_vote = ques_vote_by_user.get(question=question)
@@ -169,12 +168,11 @@ class SearchedQues(APIView):
         except Question.DoesNotExist:
             questions = None
 
-
         if questions:
             serializer = QuestionSerializer(questions, many=True)
             return Response(serializer.data)
         else:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({"status": status.HTTP_404_NOT_FOUND})
 
 
 ######################################################################################################################
@@ -188,13 +186,15 @@ class AnswerCreate(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        user = request.user
         data = request.data
         question = Question.objects.get(id=kwargs['pk'])
+        slug = question.slug
 
         serializer = AnswerSerializer(data=data)
         
         if serializer.is_valid():
-            serializer.save(question_to_ans=question, user=request.user)
+            serializer.save(question_to_ans=question, question_slug=slug, user=user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
