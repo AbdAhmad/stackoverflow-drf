@@ -23,8 +23,14 @@ class QuestionList(generics.ListCreateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        serializer = QuestionSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response({"data": serializer.data, "status": status.HTTP_201_CREATED})
+        return Response({"status": status.HTTP_400_NOT_FOUND})
+
 
     def list(self, request):
         if 'q' in request.GET and request.GET['q'] == 'latest':

@@ -1,20 +1,17 @@
 from enum import unique
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import pre_save
 
-from .slug import unique_slug_generator
 from django.utils import timezone
 
 from autoslug import AutoSlugField
 
 
 class Question(models.Model):
-    title = models.CharField(max_length=200, unique=True)
+    title = models.CharField(max_length=500, unique=True)
     body = models.TextField()
     user = models.ForeignKey(User, related_name='questions', on_delete=models.CASCADE)
     slug = AutoSlugField(populate_from='title', always_update=True, unique=True, blank=True, null=True)
-    # slug = models.SlugField(max_length=250, null=True, blank=True, unique=True)
     answers = models.ManyToManyField('stack_app.Answer', blank=True)
     tags = models.CharField(max_length=200)
     views = models.IntegerField(default=0)
@@ -25,12 +22,6 @@ class Question(models.Model):
 
     def __str__(self):
         return self.title[:50]
-
-# def pre_save_receiver(instance, **kwargs):
-#     if not instance.slug:
-#         instance.slug = unique_slug_generator(instance)
-
-# pre_save.connect(pre_save_receiver, sender=Question)
 
 
 class Answer(models.Model):
