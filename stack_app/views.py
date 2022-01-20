@@ -72,7 +72,7 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
         try:
             question = Question.objects.get(slug=kwargs['slug'])
         except Question.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': status.HTTP_404_NOT_FOUND})
 
         all_ques_vote = Questionvote.objects.filter(question=question)
         ques_upvotes = all_ques_vote.filter(upvote=True).count()
@@ -230,7 +230,7 @@ class UpvoteAns(APIView):
     def post(self, request, *args, **kwargs):
         answer = Answer.objects.get(id=kwargs['pk'])
         user = request.user
-        # slug = question.slug
+
         try:
             ans_vote_by_user = Answervote.objects.filter(user=user)
             ans_vote = ans_vote_by_user.get(answer=answer)
@@ -242,17 +242,14 @@ class UpvoteAns(APIView):
                 ans_vote.upvote = True
                 ans_vote.downvote = False
                 ans_vote.save()
-                print('in if')
                 return Response(status=status.HTTP_201_CREATED)
             else:
-                print('in else')
                 return Response(status=status.HTTP_208_ALREADY_REPORTED)
             
         serializer = AnswervoteSerializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save(user=user, upvote=True, answer=answer)
-            print('in first if')
             return Response(status=status.HTTP_201_CREATED)
 
 
@@ -264,7 +261,7 @@ class DownvoteAns(APIView):
     def post(self, request, *args, **kwargs):
         answer = Answer.objects.get(id=kwargs['pk'])
         user = request.user
-        # slug = question.slug
+    
         try:
             ans_vote_by_user = Answervote.objects.filter(user=user)
             ans_vote = ans_vote_by_user.get(answer=answer)
@@ -313,7 +310,7 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
         try:
             user = User.objects.get(username=kwargs['username'])
         except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)           
+            return Response({'status': status.HTTP_404_NOT_FOUND})           
 
         else:
             profile = Profile.objects.get(user=user)
