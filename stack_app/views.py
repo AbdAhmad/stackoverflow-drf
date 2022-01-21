@@ -18,12 +18,14 @@ from stack_app.serializers import QuestionSerializer, AnswerSerializer, Question
 
 
 class QuestionList(generics.ListCreateAPIView):
+
     questions = Question.objects.all()
     serializer_class = QuestionSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
+
         data = request.data
         serializer = QuestionSerializer(data=data)
         if serializer.is_valid():
@@ -33,6 +35,7 @@ class QuestionList(generics.ListCreateAPIView):
 
 
     def list(self, request):
+
         if 'q' in request.GET and request.GET['q'] == 'latest':
             questions = Question.objects.all().order_by('-created_at')
             question_order = 'latest'
@@ -62,6 +65,7 @@ class QuestionList(generics.ListCreateAPIView):
 
 
 class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
+
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
     authentication_classes = [JWTAuthentication]
@@ -69,6 +73,7 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "slug"
 
     def retrieve(self, request, *args, **kwargs):
+
         try:
             question = Question.objects.get(slug=kwargs['slug'])
         except Question.DoesNotExist:
@@ -100,6 +105,7 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
     def update(self, request, *args, **kwargs):
+
         try:
             question = Question.objects.get(slug=kwargs['slug'])
         except Question.DoesNotExist:
@@ -120,12 +126,13 @@ class UpvoteQues(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        
+
         question = Question.objects.get(id=kwargs['pk'])
         user = request.user
         
         try:
             ques_vote_by_user = Questionvote.objects.filter(user=user)
+            print(ques_vote_by_user)
             ques_vote = ques_vote_by_user.get(question=question)
         except Questionvote.DoesNotExist:
             ques_vote = None
@@ -152,6 +159,7 @@ class DownvoteQues(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+
         question = Question.objects.get(id=kwargs['pk'])
         user = request.user
         
@@ -207,6 +215,7 @@ class AnswerCreate(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+
         user = request.user
         data = request.data
         question = Question.objects.get(id=kwargs['pk'])
@@ -243,6 +252,7 @@ class UpvoteAns(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+
         answer = Answer.objects.get(id=kwargs['pk'])
         user = request.user
 
@@ -274,6 +284,7 @@ class DownvoteAns(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+
         answer = Answer.objects.get(id=kwargs['pk'])
         user = request.user
     
@@ -305,6 +316,7 @@ class DownvoteAns(APIView):
 
 
 class ProfileList(generics.ListCreateAPIView):
+
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     authentication_classes = [JWTAuthentication]
@@ -315,6 +327,7 @@ class ProfileList(generics.ListCreateAPIView):
 
 
 class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
+
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     authentication_classes = [JWTAuthentication]
@@ -322,6 +335,7 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
     def retrieve(self, request, *args, **kwargs):
+
         try:
             user = User.objects.get(username=kwargs['username'])
         except User.DoesNotExist:
@@ -345,6 +359,7 @@ class ProfileDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
     def update(self, request, *args, **kwargs):
+        
         data = request.data
         user = User.objects.get(username=kwargs['username'])
         profile = Profile.objects.get(user=user)
