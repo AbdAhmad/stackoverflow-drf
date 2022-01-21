@@ -99,6 +99,21 @@ class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response({'question': ques_serializer.data, 'answers': ans_serializer.data})
 
 
+    def update(self, request, *args, **kwargs):
+        try:
+            question = Question.objects.get(slug=kwargs['slug'])
+        except Question.DoesNotExist:
+            return Response({'status': status.HTTP_404_NOT_FOUND})
+        data = request.data
+
+        serializer = QuestionSerializer(instance=question, data=data)
+
+        if serializer.is_valid():
+            serializer.save()
+
+        return Response(serializer.data)
+
+
 class UpvoteQues(APIView):
 
     authentication_classes = [JWTAuthentication]
