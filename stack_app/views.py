@@ -31,7 +31,7 @@ class QuestionList(generics.ListCreateAPIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response({"data": serializer.data, "status": status.HTTP_201_CREATED})
-        return Response({"status": status.HTTP_400_NOT_FOUND})
+        return Response({"status": status.HTTP_400_BAD_REQUEST})
 
 
     def list(self, request):
